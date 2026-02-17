@@ -1314,14 +1314,29 @@ def musterileri_getir():
     return df
 
 def musteri_ekle(firma, yetkili, adres):
-    conn = db_baglan()
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO musteriler (firma_adi, yetkili_kisi, adres) VALUES (?, ?, ?)", 
-        (firma, yetkili, adres)
-    )
-    conn.commit()
-    conn.close()
+    # 1. Mevcut verileri internetten (Google Sheets) en güncel haliyle çek
+    # ttl=0 ekliyoruz ki hafızadaki (cache) eski veriyi değil, gerçek veriyi alsın
+    df_mevcut = conn.read(spreadsheet=url, worksheet="musteriler", ttl=0)
+    
+    # 2. Yeni müşteri için bir satır oluştur
+    # ID'yi otomatik belirlemek için mevcut en büyük ID'ye 1 ekliyoruz
+    yeni_id = 1 if df_mevcut.empty else int(df_mevcut['id'].max() + 1)
+    
+    yeni_satir = pd.DataFrame([{
+        "id": yeni_id,
+        "firma_adi": firma,
+        "yetkili_kisi": yetkili,
+        "adres": adres
+    }])
+    
+    # 3. Eski verilerle yeni satırı birleştir
+    df_guncel = pd.concat([df_mevcut, yeni_satir], ignore_index=True)
+    
+    # 4. Güncel tabloyu Google Sheets'e geri gönder (Yazma işlemi)
+    conn.update(spreadsheet=url, worksheet="musteriler", data=df_guncel)
+    
+    # 5. Streamlit'in hafızasını temizle ki yeni müşteri listede hemen görünsün
+    st.cache_data.clear()
 
 def musteri_guncelle(id, yeni_firma, yeni_yetkili, yeni_adres):
     conn = db_baglan()
@@ -4062,6 +4077,7 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
 
