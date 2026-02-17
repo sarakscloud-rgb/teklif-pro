@@ -21,17 +21,18 @@ import streamlit as st
 st.markdown(
     """
     <style>
-    * {
+    /* Tüm yazıların rengini siyah yapar */
+    html, body, [data-testid="stWidgetLabel"], .stText, p, h1, h2, h3 {
         color: #000000 !important;
     }
+    /* Arka planı beyaz yapar */
     .stApp {
         background-color: #ffffff;
     }
     </style>
     """,
-    unsafe_allow_stdio=True
+    unsafe_allow_html=True
 )
-
 def sayiyi_yaziya_cevir(sayi):
     if sayi == 0: return "SIFIR"
     
@@ -4012,3 +4013,4 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
