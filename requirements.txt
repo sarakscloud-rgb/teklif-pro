@@ -4,3 +4,4 @@ xlsxwriter
 fpdf
 Pillow
 python-docx
+st-gsheets-connection
