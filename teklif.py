@@ -17,7 +17,17 @@ from datetime import date
 from PIL import Image
 from xlsxwriter.utility import xl_rowcol_to_cell
 import streamlit as st
+import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 
+# Bağlantı Ayarı
+url = "https://docs.google.com/spreadsheets/d/15RGLjHLgU6MF4EnaAjMh7q58PBcwKiKRJM1-KWrLJgg/edit?usp=sharing"
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+# Verileri okumak için örnek fonksiyon
+def verileri_getir(sayfa_adi):
+    return conn.read(spreadsheet=url, worksheet=sayfa_adi)
+    
 st.markdown(
     """
     <style>
@@ -4031,5 +4041,6 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
