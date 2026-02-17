@@ -24,19 +24,30 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# Bağlantıyı bir kez kuruyoruz
+import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
+
+# 1. Bağlantıyı tanımla
 url = "https://docs.google.com/spreadsheets/d/15RGLjHLgU6MF4EnaAjMh7q58PBcwKiKRJM1-KWrLJgg/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# GENEL OKUMA FONKSİYONU
-def veri_oku(sekme_adi):
-    # ttl=0 ekliyoruz ki her seferinde güncel veriyi çeksin
-    return conn.read(spreadsheet=url, worksheet=sekme_adi, ttl=0)
-
-# GENEL YAZMA FONKSİYONU
-def veri_kaydet(sekme_adi, guncel_df):
+# 2. Her tabloya (5 veritabanı sekmesi) yazabilen süper fonksiyon
+def buluta_kaydet(sekme_adi, yeni_veri_dict):
+    # Mevcut veriyi internetten çek (En güncel hali)
+    mevcut_df = conn.read(spreadsheet=url, worksheet=sekme_adi, ttl=0)
+    
+    # Yeni veriyi DataFrame'e çevir
+    yeni_satir = pd.DataFrame([yeni_veri_dict])
+    
+    # Eskinin altına yeniyi ekle
+    guncel_df = pd.concat([mevcut_df, yeni_satir], ignore_index=True)
+    
+    # Google Sheets'i güncelle
     conn.update(spreadsheet=url, worksheet=sekme_adi, data=guncel_df)
-    st.cache_data.clear() # Önbelleği temizle ki yeni veri hemen görünsün
+    
+    # Önbelleği temizle ki yeni veri anında görünsün
+    st.cache_data.clear()
     
 st.markdown(
     """
@@ -4051,6 +4062,7 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
 
