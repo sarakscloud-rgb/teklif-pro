@@ -21,13 +21,31 @@ import streamlit as st
 st.markdown(
     """
     <style>
-    /* Tüm yazıların rengini siyah yapar */
-    html, body, [data-testid="stWidgetLabel"], .stText, p, h1, h2, h3 {
-        color: #000000 !important;
-    }
-    /* Arka planı beyaz yapar */
+    /* 1. Tüm sayfa arka planını beyaza zorla */
     .stApp {
-        background-color: #ffffff;
+        background-color: white !important;
+    }
+
+    /* 2. Tüm metinleri (başlıklar, paragraflar, etiketler) siyah yap */
+    html, body, [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"], 
+    p, span, h1, h2, h3, h4, h5, h6, label {
+        color: black !important;
+        -webkit-text-fill-color: black !important;
+    }
+
+    /* 3. Giriş kutularının (Input) içindeki yazıların okunabilirliğini artır */
+    input {
+        color: black !important;
+    }
+
+    /* 4. Sol taraftaki menü (Sidebar) yazılarını siyah yap */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: black !important;
+    }
+    
+    /* 5. Tablo başlıklarını ve hücrelerini siyah yap */
+    .stDataFrame div, .stDataFrame span {
+        color: black !important;
     }
     </style>
     """,
@@ -4013,4 +4031,5 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
