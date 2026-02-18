@@ -1309,38 +1309,55 @@ def musteri_ekle(firma, yetkili, adres):
     global gsheet_conn, url 
     
     try:
-        # 1. Veriyi çek
+        # 1. Mevcut veriyi oku
         df_mevcut = gsheet_conn.read(spreadsheet=url, worksheet="musteriler", ttl=0)
         
-        # 2. Yeni satırı tam kolon isimleriyle hazırla
-        # (Excel'in ilk satırındaki isimlerle birebir aynı olmalı)
+        # 2. Sütunların doğru sırada olduğundan emin olalım (Gereksiz sütunları atar)
+        istenen_sutunlar = ["id", "firma_adi", "yetkili_kisi", "adres"]
+        
+        # Eğer sheet boşsa veya sütunlar eksikse, yapıyı biz kuralım
+        if df_mevcut.empty or not set(istenen_sutunlar).issubset(df_mevcut.columns):
+            df_mevcut = pd.DataFrame(columns=istenen_sutunlar)
+        else:
+            df_mevcut = df_mevcut[istenen_sutunlar] # Sadece bu 4 sütunu al
+
+        # 3. Yeni ID belirle
+        # ID sütunundaki hatalı verileri (metin vb.) temizleyip sayıya çevirir
+        df_mevcut['id'] = pd.to_numeric(df_mevcut['id'], errors='coerce').fillna(0)
         yeni_id = 1 if df_mevcut.empty else int(df_mevcut['id'].max() + 1)
         
-        yeni_data = {
-            "id": [yeni_id],
-            "firma_adi": [firma],
-            "yetkili_kisi": [yetkili],
-            "adres": [adres]
+        # 4. Yeni veriyi hazırla (Dictionary formatında)
+        yeni_veri = {
+            "id": int(yeni_id),
+            "firma_adi": str(firma).strip(), # Baştaki/sondaki boşlukları sil
+            "yetkili_kisi": str(yetkili).strip() if yetkili else "", # Boşsa "" yap
+            "adres": str(adres).strip() if adres else ""
         }
-        yeni_df = pd.DataFrame(yeni_data)
         
-        # 3. Mevcut veri boşsa sadece yeniyi, doluysa ikisini birleştir
-        if df_mevcut.empty:
-            df_final = yeni_df
-        else:
-            # Sadece eşleşen kolonları birleştir (400 hatasını önlemek için)
-            df_final = pd.concat([df_mevcut, yeni_df], ignore_index=True).fillna("")
-
-        # 4. Google Sheets'e gönder
-        # (index=False diyerek yan tarafa gereksiz sayı eklemesini önlüyoruz)
+        # 5. Birleştirme İşlemi
+        df_yeni_satir = pd.DataFrame([yeni_veri])
+        df_final = pd.concat([df_mevcut, df_yeni_satir], ignore_index=True)
+        
+        # --- KRİTİK TEMİZLİK (400 HATASINI ÇÖZEN KISIM) ---
+        # 1. Tüm NaN (boş) değerleri boş string ("") ile doldur
+        df_final = df_final.fillna("")
+        
+        # 2. Veri tiplerini zorla (Google Sheets sayı ve metni karıştırmayı sevmez)
+        df_final = df_final.astype({
+            "id": "int",
+            "firma_adi": "str",
+            "yetkili_kisi": "str",
+            "adres": "str"
+        })
+        
+        # 6. Gönder (Sadece temiz veriyi yazar)
         gsheet_conn.update(spreadsheet=url, worksheet="musteriler", data=df_final)
         
-        st.success(f"{firma} başarıyla kaydedildi!")
+        st.success(f"✅ {firma} başarıyla sisteme işlendi! (Müşteri ID: {yeni_id})")
         st.cache_data.clear()
         
     except Exception as e:
-        # Hata mesajını daha detaylı görelim
-        st.error(f"Detaylı Hata: {e}")
+        st.error(f"Kayıt Hatası: {e}")
         
 def musteri_guncelle(id, yeni_firma, yeni_yetkili, yeni_adres):
     conn = db_baglan()
@@ -4081,6 +4098,7 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
 
