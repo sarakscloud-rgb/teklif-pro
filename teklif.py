@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 url = "https://docs.google.com/spreadsheets/d/15RGLjHLgU6MF4EnaAjMh7q58PBcwKiKRJM1-KWrLJgg/edit?usp=sharing"
-conn = st.connection("gsheets", type=GSheetsConnection)
+gsheet_conn = st.connection("gsheets", type=GSheetsConnection)
 
 import streamlit as st
 import pandas as pd
@@ -1306,26 +1306,32 @@ def musterileri_getir():
     return df
 
 def musteri_ekle(firma, yetkili, adres):
-    global conn, url 
+    # Dışarıdaki gsheet_conn ve url değişkenlerini kullanıyoruz
+    global gsheet_conn, url 
     
     try:
-        st.info("Veriler okunuyor...") # Ekranda bilgi verir
-        df_mevcut = conn.read(spreadsheet=url, worksheet="musteriler", ttl=0)
+        # Hata aldığın satırı gsheet_conn.read olarak güncelledik
+        df_mevcut = gsheet_conn.read(spreadsheet=url, worksheet="musteriler", ttl=0)
         
+        # Yeni müşteri satırı hazırlama
         yeni_id = 1 if df_mevcut.empty else int(df_mevcut['id'].max() + 1)
-        yeni_satir = pd.DataFrame([{"id": yeni_id, "firma_adi": firma, "yetkili_kisi": yetkili, "adres": adres}])
+        yeni_satir = pd.DataFrame([{
+            "id": yeni_id, 
+            "firma_adi": firma, 
+            "yetkili_kisi": yetkili, 
+            "adres": adres
+        }])
         
+        # Birleştir ve Google Sheets'e yaz
         df_guncel = pd.concat([df_mevcut, yeni_satir], ignore_index=True)
+        gsheet_conn.update(spreadsheet=url, worksheet="musteriler", data=df_guncel)
         
-        st.info("Buluta gönderiliyor...")
-        conn.update(spreadsheet=url, worksheet="musteriler", data=df_guncel)
-        
-        st.success(f"Başarıyla kaydedildi: {firma}")
-        st.cache_data.clear() # Listeyi güncellemek için önbelleği siler
+        st.success(f"{firma} başarıyla buluta kaydedildi!")
+        st.cache_data.clear()
         
     except Exception as e:
         st.error(f"Kayıt sırasında bir aksilik oldu: {e}")
-
+        
 def musteri_guncelle(id, yeni_firma, yeni_yetkili, yeni_adres):
     conn = db_baglan()
     c = conn.cursor()
@@ -4065,6 +4071,7 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
 
