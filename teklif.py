@@ -1306,31 +1306,41 @@ def musterileri_getir():
     return df
 
 def musteri_ekle(firma, yetkili, adres):
-    # Dışarıdaki gsheet_conn ve url değişkenlerini kullanıyoruz
     global gsheet_conn, url 
     
     try:
-        # Hata aldığın satırı gsheet_conn.read olarak güncelledik
+        # 1. Veriyi çek
         df_mevcut = gsheet_conn.read(spreadsheet=url, worksheet="musteriler", ttl=0)
         
-        # Yeni müşteri satırı hazırlama
+        # 2. Yeni satırı tam kolon isimleriyle hazırla
+        # (Excel'in ilk satırındaki isimlerle birebir aynı olmalı)
         yeni_id = 1 if df_mevcut.empty else int(df_mevcut['id'].max() + 1)
-        yeni_satir = pd.DataFrame([{
-            "id": yeni_id, 
-            "firma_adi": firma, 
-            "yetkili_kisi": yetkili, 
-            "adres": adres
-        }])
         
-        # Birleştir ve Google Sheets'e yaz
-        df_guncel = pd.concat([df_mevcut, yeni_satir], ignore_index=True)
-        gsheet_conn.update(spreadsheet=url, worksheet="musteriler", data=df_guncel)
+        yeni_data = {
+            "id": [yeni_id],
+            "firma_adi": [firma],
+            "yetkili_kisi": [yetkili],
+            "adres": [adres]
+        }
+        yeni_df = pd.DataFrame(yeni_data)
         
-        st.success(f"{firma} başarıyla buluta kaydedildi!")
+        # 3. Mevcut veri boşsa sadece yeniyi, doluysa ikisini birleştir
+        if df_mevcut.empty:
+            df_final = yeni_df
+        else:
+            # Sadece eşleşen kolonları birleştir (400 hatasını önlemek için)
+            df_final = pd.concat([df_mevcut, yeni_df], ignore_index=True).fillna("")
+
+        # 4. Google Sheets'e gönder
+        # (index=False diyerek yan tarafa gereksiz sayı eklemesini önlüyoruz)
+        gsheet_conn.update(spreadsheet=url, worksheet="musteriler", data=df_final)
+        
+        st.success(f"{firma} başarıyla kaydedildi!")
         st.cache_data.clear()
         
     except Exception as e:
-        st.error(f"Kayıt sırasında bir aksilik oldu: {e}")
+        # Hata mesajını daha detaylı görelim
+        st.error(f"Detaylı Hata: {e}")
         
 def musteri_guncelle(id, yeni_firma, yeni_yetkili, yeni_adres):
     conn = db_baglan()
@@ -4071,6 +4081,7 @@ elif st.session_state.sayfa_secimi == "🚛 Teslim Tutanağı":
     except NameError:
 
         st.error("Veritabanı fonksiyonu eksik.")
+
 
 
 
